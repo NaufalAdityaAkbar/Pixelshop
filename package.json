@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build && mkdir -p dist && cp -r .next/standalone/. dist/",
-    "start": "node dist/server.js",
+    "dev": "next dev",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
+    "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {

@@ -42,7 +42,7 @@ export async function exportToGoogleCalendar(
     min = parseInt(parts[1], 10) || 0;
   }
   let endHour = hour + 1;
-  const endDate = date;
+  let endDate = date;
   if (endHour >= 24) {
     endHour = 23;
     min = 59;

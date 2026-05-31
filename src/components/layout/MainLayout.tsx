@@ -24,15 +24,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   React.useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem('pixelshop_sidebar_collapsed');
-      if (saved === 'true') {
-        setTimeout(() => {
-          setIsSidebarCollapsed(true);
-        }, 0);
-      }
-    } catch (e) {
-      console.warn("Could not load sidebar status from localStorage:", e);
+    const saved = localStorage.getItem('pixelshop_sidebar_collapsed');
+    if (saved === 'true') {
+      setIsSidebarCollapsed(true);
     }
   }, []);
 
@@ -59,11 +53,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const toggleSidebar = () => {
     const nextVal = !isSidebarCollapsed;
     setIsSidebarCollapsed(nextVal);
-    try {
-      window.localStorage.setItem('pixelshop_sidebar_collapsed', String(nextVal));
-    } catch (e) {
-      console.warn("Could not save sidebar status to localStorage:", e);
-    }
+    localStorage.setItem('pixelshop_sidebar_collapsed', String(nextVal));
   };
   const workspaceRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
@@ -125,7 +115,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return (
       <LandingAndAuth
         onNavigate={(page) => {
-          console.log("MainLayout: onNavigate called with:", page);
           if (page === 'dashboard') {
             router.push('/dashboard');
           } else {
