@@ -1,2 +1,10 @@
-// This file is intentionally left empty.
-// It was a legacy Vite entry point and is not used by Next.js.
+import {StrictMode} from 'react';
+import {createRoot} from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

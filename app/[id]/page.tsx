@@ -1,6 +1,6 @@
 "use client";
-import React from 'react';
-import { useParams, useRouter, redirect } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useAppContext } from '@/src/context/AppContext';
 import ToolsViews from '@/src/components/ToolsViews';
 import { PageId } from '@/src/types';
@@ -10,14 +10,19 @@ export default function ToolPage() {
   const router = useRouter();
   const { products, preselectedProduct, addXP, saveGeneratedContent, addCalendarEvents, contents, deleteGeneratedContent, aiTrainer } = useAppContext();
   
-  if (!id || typeof id !== 'string') return null;
-
-  // Re-map URL parameter (e.g., 'content-plan-tool') back to internal ID ('content_plan_tool')
-  const toolId = id.replaceAll('-', '_') as PageId;
-
+  const toolId = (typeof id === 'string' ? id.replaceAll('-', '_') : '') as PageId;
   const validTools = ['caption_tool', 'description_tool', 'content_plan_tool', 'chat_reply_tool', 'competitor_tool'];
-  if (!validTools.includes(toolId)) {
-    redirect('/dashboard');
+
+  useEffect(() => {
+    if (!id || typeof id !== 'string') return;
+    const currentToolId = id.replaceAll('-', '_');
+    if (!validTools.includes(currentToolId)) {
+      router.replace('/dashboard');
+    }
+  }, [id, router]);
+
+  if (!id || typeof id !== 'string' || !validTools.includes(toolId)) {
+    return null;
   }
 
   return (

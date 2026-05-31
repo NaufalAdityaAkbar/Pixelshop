@@ -70,10 +70,73 @@ function getDummyProducts(category: string) {
   ];
 }
 
+async function handleTestDb() {
+  const dbUrl = process.env.DATABASE_URL;
+  const directUrl = process.env.DIRECT_URL;
+  const envCheck = {
+    DATABASE_URL_PRESENT: !!dbUrl,
+    DATABASE_URL_PRE_SAMPLED: dbUrl ? dbUrl.split("@")[1] ? "postgres://***@" + dbUrl.split("@")[1].substring(0, 15) + "..." : "DETECTED_BUT_NOT_PARSABLE" : "MISSING",
+    DIRECT_URL_PRESENT: !!directUrl,
+    DIRECT_URL_PRE_SAMPLED: directUrl ? directUrl.split("@")[1] ? "postgres://***@" + directUrl.split("@")[1].substring(0, 15) + "..." : "DETECTED_BUT_NOT_PARSABLE" : "MISSING",
+    NODE_ENV: process.env.NODE_ENV,
+  };
+
+  try {
+    console.log("[TEST-DB] Diagnostic triggered. Checking DB connectivity under Prisma...");
+    const start = Date.now();
+    const shopCount = await prisma.shop.count();
+    const duration = Date.now() - start;
+
+    console.log(`[TEST-DB] Success! Shop count: ${shopCount}. Query took ${duration}ms.`);
+
+    return NextResponse.json({
+      status: "success",
+      message: "Database connection successfully verified!",
+      shopCount,
+      durationMs: duration,
+      envCheck,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("[TEST-DB] Database connection failed!", error);
+
+    return NextResponse.json({
+      status: "error",
+      message: "Failed to connect to the database. Look at environment parameters and Cloud SQL logs.",
+      errorDescription: error.message || String(error),
+      errorName: error.name || "UnknownError",
+      errorStack: error.stack ? error.stack.split("\n").slice(0, 5) : undefined,
+      envCheck,
+      timestamp: new Date().toISOString(),
+    }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ action: string }> }) {
+  const resolvedParams = await params;
+  const action = resolvedParams.action;
+
+  if (action === "test-db") {
+    return await handleTestDb();
+  }
+
+  return NextResponse.json({ error: `Action ${action} not supported via GET.` }, { status: 405 });
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ action: string }> }) {
   const resolvedParams = await params;
   const action = resolvedParams.action;
-  const body = await req.json();
+
+  if (action === "test-db") {
+    return await handleTestDb();
+  }
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch (err) {
+    console.warn("[API] Could not parse request body json", err);
+  }
 
   // ─── DATABASE CRUD OPERATIONS FOR PIXELSHOP ───
   if (action === "get-db-state") {

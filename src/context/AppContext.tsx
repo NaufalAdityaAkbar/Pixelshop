@@ -58,47 +58,13 @@ export const useAppContext = () => {
 };
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<UserSession>(() => {
-    if (typeof window === 'undefined') return { email: '', isLoggedIn: false };
-    const saved = localStorage.getItem('pixelshop_session');
-    return saved ? JSON.parse(saved) : { email: '', isLoggedIn: false };
-  });
-
-  const [shopInfo, setShopInfo] = useState<ShopInfo>(() => {
-    if (typeof window === 'undefined') return DEFAULT_SHOP;
-    const saved = localStorage.getItem('pixelshop_shopInfo');
-    return saved ? JSON.parse(saved) : DEFAULT_SHOP;
-  });
-
-  const [products, setProducts] = useState<Product[]>(() => {
-    if (typeof window === 'undefined') return INITIAL_PRODUCTS;
-    const saved = localStorage.getItem('pixelshop_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
-
-  const [contents, setContents] = useState<GeneratedContent[]>(() => {
-    if (typeof window === 'undefined') return [];
-    const saved = localStorage.getItem('pixelshop_contents');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [events, setEvents] = useState<CalendarEvent[]>(() => {
-    if (typeof window === 'undefined') return INITIAL_CALENDAR_EVENTS;
-    const saved = localStorage.getItem('pixelshop_events');
-    return saved ? JSON.parse(saved) : INITIAL_CALENDAR_EVENTS;
-  });
-
-  const [achievements, setAchievements] = useState<Achievement[]>(() => {
-    if (typeof window === 'undefined') return INITIAL_ACHIEVEMENTS;
-    const saved = localStorage.getItem('pixelshop_achievements');
-    return saved ? JSON.parse(saved) : INITIAL_ACHIEVEMENTS;
-  });
-
-  const [aiTrainer, setAiTrainer] = useState<AITrainerSettings>(() => {
-    if (typeof window === 'undefined') return DEFAULT_AI_TRAINER;
-    const saved = localStorage.getItem('pixelshop_ai_trainer');
-    return saved ? JSON.parse(saved) : DEFAULT_AI_TRAINER;
-  });
+  const [session, setSession] = useState<UserSession>({ email: '', isLoggedIn: false });
+  const [shopInfo, setShopInfo] = useState<ShopInfo>(DEFAULT_SHOP);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [contents, setContents] = useState<GeneratedContent[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
+  const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
+  const [aiTrainer, setAiTrainer] = useState<AITrainerSettings>(DEFAULT_AI_TRAINER);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [preselectedProduct, setPreselectedProduct] = useState<Product | null>(null);
@@ -121,26 +87,126 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
+  // Hydrate states from localStorage safely inside useEffect (Client-Only after mount)
   useEffect(() => {
-    localStorage.setItem('pixelshop_session', JSON.stringify(session));
+    if (typeof window === 'undefined') return;
+
+    const timer = setTimeout(() => {
+      try {
+        const savedSession = window.localStorage.getItem('pixelshop_session');
+        if (savedSession) setSession(JSON.parse(savedSession));
+      } catch (e) {
+        console.warn("Could not load session from localStorage:", e);
+      }
+
+      try {
+        const savedShopInfo = window.localStorage.getItem('pixelshop_shopInfo');
+        if (savedShopInfo) setShopInfo(JSON.parse(savedShopInfo));
+      } catch (e) {
+        console.warn("Could not load shopInfo from localStorage:", e);
+      }
+
+      try {
+        const savedProducts = window.localStorage.getItem('pixelshop_products');
+        if (savedProducts) setProducts(JSON.parse(savedProducts));
+      } catch (e) {
+        console.warn("Could not load products from localStorage:", e);
+      }
+
+      try {
+        const savedContents = window.localStorage.getItem('pixelshop_contents');
+        if (savedContents) setContents(JSON.parse(savedContents));
+      } catch (e) {
+        console.warn("Could not load contents from localStorage:", e);
+      }
+
+      try {
+        const savedEvents = window.localStorage.getItem('pixelshop_events');
+        if (savedEvents) setEvents(JSON.parse(savedEvents));
+      } catch (e) {
+        console.warn("Could not load events from localStorage:", e);
+      }
+
+      try {
+        const savedAchievements = window.localStorage.getItem('pixelshop_achievements');
+        if (savedAchievements) setAchievements(JSON.parse(savedAchievements));
+      } catch (e) {
+        console.warn("Could not load achievements from localStorage:", e);
+      }
+
+      try {
+        const savedAiTrainer = window.localStorage.getItem('pixelshop_ai_trainer');
+        if (savedAiTrainer) setAiTrainer(JSON.parse(savedAiTrainer));
+      } catch (e) {
+        console.warn("Could not load aiTrainer from localStorage:", e);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Save changes to localStorage with absolute safety (wrap every write in try-catch)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_session', JSON.stringify(session));
+    } catch (e) {
+      console.warn("Could not write session to localStorage:", e);
+    }
   }, [session]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_shopInfo', JSON.stringify(shopInfo));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_shopInfo', JSON.stringify(shopInfo));
+    } catch (e) {
+      console.warn("Could not write shopInfo to localStorage:", e);
+    }
   }, [shopInfo]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_products', JSON.stringify(products));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_products', JSON.stringify(products));
+    } catch (e) {
+      console.warn("Could not write products to localStorage:", e);
+    }
   }, [products]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_contents', JSON.stringify(contents));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_contents', JSON.stringify(contents));
+    } catch (e) {
+      console.warn("Could not write contents to localStorage:", e);
+    }
   }, [contents]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_events', JSON.stringify(events));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_events', JSON.stringify(events));
+    } catch (e) {
+      console.warn("Could not write events to localStorage:", e);
+    }
   }, [events]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_achievements', JSON.stringify(achievements));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_achievements', JSON.stringify(achievements));
+    } catch (e) {
+      console.warn("Could not write achievements to localStorage:", e);
+    }
   }, [achievements]);
+
   useEffect(() => {
-    localStorage.setItem('pixelshop_ai_trainer', JSON.stringify(aiTrainer));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('pixelshop_ai_trainer', JSON.stringify(aiTrainer));
+    } catch (e) {
+      console.warn("Could not write aiTrainer to localStorage:", e);
+    }
   }, [aiTrainer]);
 
   // Load state from Supabase PostgreSQL on mount/login
@@ -536,7 +602,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateAiTrainer = async (settings: Partial<AITrainerSettings>) => {
-    let nextSettings = { ...aiTrainer, ...settings };
+    const nextSettings = { ...aiTrainer, ...settings };
     setAiTrainer(nextSettings);
     if (session.isLoggedIn && session.email) {
       try {

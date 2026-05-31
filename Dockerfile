@@ -25,6 +25,14 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
+# Verification step to ensure standalone build exists before runner phase
+RUN if [ ! -d "/app/.next/standalone" ]; then \
+      echo "CRITICAL: Standalone build directory not found! Check Next.js build logging above."; \
+      exit 1; \
+    else \
+      echo "SUCCESS: Standalone directory verified. Proceeding to runner phase."; \
+    fi
+
 # 3. Production image, copy all the files and run next
 FROM node:18-alpine AS runner
 WORKDIR /app
@@ -50,5 +58,9 @@ EXPOSE 3000
 ENV PORT 3000
 # set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
+
+# Explicit healthcheck using Node.js fetch inside runtime image
+HEALTHCHECK --interval=30s --timeout=15s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
 CMD ["node", "server.js"]
