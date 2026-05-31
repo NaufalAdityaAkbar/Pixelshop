@@ -5,7 +5,7 @@ import { GeneratedContent } from '../types';
 import { googleSignIn, getAccessToken, initAuth } from '../lib/workspaceAuth';
 import { exportToGoogleCalendar, sendEmailViaGmail, uploadFileToDrive } from '../lib/workspaceApis';
 
-export default function FloatingWorkspaceBar({ latestContent }: { latestContent: GeneratedContent | null }) {
+export default function FloatingWorkspaceBar({ latestContent, isVisible }: { latestContent: GeneratedContent | null; isVisible: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -93,27 +93,35 @@ export default function FloatingWorkspaceBar({ latestContent }: { latestContent:
   });
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-      <div className="pointer-events-auto">
-        <AnimatePresence>
-          {status && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#1c1410] border border-brand-accent/50 text-brand-text text-[10px] px-3 py-1.5 rounded-full font-mono whitespace-nowrap shadow-lg flex items-center gap-1.5"
-            >
-              {status.includes('Berhasil') || status.includes('terhubung') ? <Check className="w-3 h-3 text-emerald-400" /> : null}
-              {status}
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        <motion.div 
-          layout
-          initial={{ borderRadius: 32 }}
-          className="bg-[#261e14]/90 backdrop-blur-md border border-brand-border/40 shadow-2xl overflow-hidden flex items-center"
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 40, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 40, x: '-50%' }}
+          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+          className="absolute bottom-6 left-1/2 z-[50] pointer-events-none w-max"
         >
+          <div className="pointer-events-auto">
+            <AnimatePresence>
+              {status && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#1c1410] border border-brand-accent/50 text-brand-text text-[10px] px-3 py-1.5 rounded-full font-mono whitespace-nowrap shadow-lg flex items-center gap-1.5"
+                >
+                  {status.includes('Berhasil') || status.includes('terhubung') ? <Check className="w-3 h-3 text-emerald-400" /> : null}
+                  {status}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <motion.div 
+              layout
+              initial={{ borderRadius: 32 }}
+              className="bg-brand-surface/40 backdrop-blur-xl border border-brand-accent/30 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_20px_rgba(250,204,21,0.15)] overflow-hidden flex items-center"
+            >
           <button 
             onClick={() => setIsOpen(!isOpen)}
             className="flex items-center gap-2 px-5 py-3 text-xs font-bold text-brand-text hover:bg-white/5 transition"
@@ -173,6 +181,8 @@ export default function FloatingWorkspaceBar({ latestContent }: { latestContent:
           </AnimatePresence>
         </motion.div>
       </div>
-    </div>
+    </motion.div>
+  )}
+</AnimatePresence>
   );
 }

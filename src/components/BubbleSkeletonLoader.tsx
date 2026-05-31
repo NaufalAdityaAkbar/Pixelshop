@@ -49,7 +49,7 @@ export default function BubbleSkeletonLoader() {
       id: ++bubbleId,
       x: 10 + Math.random() * 80,
       size: 15 + Math.random() * 30,
-      color: Math.random() > 0.4 ? 'rgba(212,149,106, 0.25)' : 'rgba(138, 201, 138, 0.25)',
+      color: Math.random() > 0.4 ? 'rgba(250,204,21, 0.25)' : 'rgba(251,191,36, 0.25)',
       duration: 3 + Math.random() * 4,
       delay: Math.random() * 3,
     }));
@@ -61,7 +61,7 @@ export default function BubbleSkeletonLoader() {
         id: ++bubbleId,
         x: 5 + Math.random() * 90,
         size: 12 + Math.random() * 28,
-        color: Math.random() > 0.5 ? 'rgba(212,149,106, 0.2)' : 'rgba(255, 255, 255, 0.15)',
+        color: Math.random() > 0.5 ? 'rgba(250,204,21, 0.2)' : 'rgba(251, 191, 36, 0.18)',
         duration: 4 + Math.random() * 3,
         delay: 0,
       };
@@ -91,12 +91,12 @@ export default function BubbleSkeletonLoader() {
   };
 
   return (
-    <div className="relative w-full rounded-3xl p-8 bg-gradient-to-b from-[#140e0b] via-[#0c0806] to-[#120c09] border border-brand-accent/20 overflow-hidden shadow-2xl space-y-8 select-none">
+    <div className="relative w-full h-full rounded-3xl p-8 bg-gradient-to-b from-[#1c1305] via-[#0d0903] to-[#140e04] border border-[#facc15]/30 shadow-[0_0_20px_rgba(250,204,21,0.08)] overflow-hidden flex flex-col justify-between select-none">
       
       {/* Dynamic brewing container for fluid molecules */}
       <div className="absolute inset-x-0 bottom-0 h-48 pointer-events-none overflow-hidden">
         {/* Soft amber radial steam underlay */}
-        <div className="absolute bottom-[-50px] left-1/2 -translate-x-1/2 w-80 h-40 rounded-full bg-brand-accent/10 blur-[60px] animate-pulse" />
+        <div className="absolute bottom-[-50px] left-1/2 -translate-x-1/2 w-80 h-40 rounded-full bg-[#facc15]/15 blur-[60px] animate-pulse" />
         
         {/* Floating Interactive Bubbles */}
         <AnimatePresence>
@@ -129,13 +129,13 @@ export default function BubbleSkeletonLoader() {
                 height: b.size,
                 borderRadius: '50%',
                 background: `radial-gradient(circle at 30% 30%, ${b.color.replace('0.2', '0.4').replace('0.15', '0.3')}, transparent)`,
-                border: '1px solid rgba(212,149,106, 0.35)',
-                boxShadow: '0 4px 12px rgba(212,149,106, 0.1)',
+                border: '1px solid rgba(250,204,21, 0.35)',
+                boxShadow: '0 4px 12px rgba(250,204,21, 0.15)',
                 backdropFilter: 'blur(1px)',
                 cursor: 'pointer',
               }}
               whileHover={{ scale: 1.5 }}
-              onClick={() => triggerBurst(b.x, -20, 'rgba(212,149,106, 0.7)')}
+              onClick={() => triggerBurst(b.x, -20, 'rgba(250,204,21, 0.75)')}
             />
           ))}
         </AnimatePresence>
@@ -176,19 +176,19 @@ export default function BubbleSkeletonLoader() {
       <div className="space-y-6 relative z-10">
         
         {/* Loading Header indicator */}
-        <div className="flex justify-between items-center border-b border-brand-border/20 pb-4">
+         <div className="flex justify-between items-center border-b border-[#facc15]/20 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 bg-brand-accent/20 rounded-full flex items-center justify-center border border-brand-accent/30 shadow-[0_0_12px_rgba(212,149,106,0.15)]">
-              <Sparkles className="h-4 w-4 text-brand-accent animate-spin-slow" />
+            <div className="h-9 w-9 bg-[#facc15]/25 rounded-full flex items-center justify-center border border-[#facc15]/30 shadow-[0_0_12px_rgba(250,204,21,0.25)]">
+              <Sparkles className="h-4 w-4 text-[#facc15] animate-spin-slow" />
             </div>
             <div>
-              <span className="block text-[9px] font-mono text-brand-accent uppercase tracking-widest font-extrabold animate-pulse">Meramu Konten Pintar</span>
+              <span className="block text-[9px] font-mono text-[#facc15] uppercase tracking-widest font-extrabold animate-pulse">Meramu Konten Pintar</span>
               <h4 className="text-sm font-bold text-brand-text font-serif">PixelShop AI Formula Lab</h4>
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-[#1a120e] px-2.5 py-1 rounded-md border border-brand-accent/15">
-            <span className="h-2 w-2 rounded-full bg-brand-accent animate-ping" />
-            <span className="text-[10px] font-mono text-brand-accent font-bold">ACTIVE</span>
+          <div className="flex items-center gap-1 bg-[#241a08] px-2.5 py-1 rounded-md border border-[#facc15]/30 shadow-[0_0_8px_rgba(250,204,21,0.15)]">
+            <span className="h-2 w-2 rounded-full bg-[#facc15] animate-ping" />
+            <span className="text-[10px] font-mono text-[#facc15] font-bold">ACTIVE</span>
           </div>
         </div>
 
@@ -209,34 +209,34 @@ export default function BubbleSkeletonLoader() {
         </div>
 
         {/* Skeleton content field with bubbling glass overlays */}
-        <div className="relative p-5 bg-[#0e0a08]/75 rounded-2xl border border-brand-border/25 space-y-4">
+        <div className="relative p-5 bg-[#0e0a08]/75 rounded-2xl border border-[#facc15]/20 space-y-4">
           
           {/* Top placeholder badge */}
           <div className="flex justify-between">
-            <div className="h-4.5 bg-gradient-to-r from-brand-accent/15 via-brand-accent/5 to-brand-accent/15 rounded w-[90px] animate-pulse" />
-            <div className="h-4 bg-brand-border/20 rounded w-10 animate-pulse" />
+            <div className="h-4.5 bg-gradient-to-r from-[#facc15]/20 via-[#facc15]/5 to-[#facc15]/20 rounded w-[90px] animate-pulse" />
+            <div className="h-4 bg-[#facc15]/10 rounded w-10 animate-pulse" />
           </div>
 
           {/* Liquid-simulated line placeholders */}
           <div className="space-y-3.5 pt-2">
-            <div className="h-3 bg-gradient-to-r from-brand-border/10 via-brand-accent/10 to-brand-border/10 rounded w-full animate-pulse" style={{ animationDelay: '0.1s' }} />
-            <div className="h-3 bg-gradient-to-r from-brand-border/10 via-brand-accent/10 to-brand-border/10 rounded w-[94%] animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <div className="h-3 bg-gradient-to-r from-brand-border/10 via-brand-accent/10 to-brand-border/10 rounded w-[88%] animate-pulse" style={{ animationDelay: '0.3s' }} />
-            <div className="h-3 bg-gradient-to-r from-brand-border/10 via-brand-accent/10 to-brand-border/10 rounded w-[72%] animate-pulse" style={{ animationDelay: '0.4s' }} />
+            <div className="h-3 bg-gradient-to-r from-[#facc15]/10 via-[#facc15]/15 to-[#facc15]/10 rounded w-full animate-pulse" style={{ animationDelay: '0.1s' }} />
+            <div className="h-3 bg-gradient-to-r from-[#facc15]/10 via-[#facc15]/15 to-[#facc15]/10 rounded w-[94%] animate-pulse" style={{ animationDelay: '0.2s' }} />
+            <div className="h-3 bg-gradient-to-r from-[#facc15]/10 via-[#facc15]/15 to-[#facc15]/10 rounded w-[88%] animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <div className="h-3 bg-gradient-to-r from-[#facc15]/10 via-[#facc15]/15 to-[#facc15]/10 rounded w-[72%] animate-pulse" style={{ animationDelay: '0.4s' }} />
           </div>
 
           {/* Highlighted liquid zone */}
-          <div className="mt-4 p-3 bg-brand-accent/[0.03] border border-brand-accent/10 rounded-xl space-y-2">
-            <div className="h-2.5 bg-brand-accent/10 rounded w-28 animate-pulse" />
-            <div className="h-2 bg-brand-border/10 rounded w-full animate-pulse" />
+          <div className="mt-4 p-3 bg-[#facc15]/5 border border-[#facc15]/15 rounded-xl space-y-2">
+            <div className="h-2.5 bg-[#facc15]/10 rounded w-28 animate-pulse" />
+            <div className="h-2 bg-[#facc15]/5 rounded w-full animate-pulse" />
           </div>
 
         </div>
 
         {/* Skeleton Interactive Action buttons */}
         <div className="pt-2 flex gap-3">
-          <div className="h-10 bg-gradient-to-r from-brand-border/15 via-brand-accent/5 to-brand-border/15 rounded-xl flex-1 animate-pulse" />
-          <div className="h-10 bg-gradient-to-r from-brand-border/15 via-brand-accent/5 to-brand-border/15 rounded-xl flex-1 animate-pulse" />
+          <div className="h-10 bg-gradient-to-r from-brand-border/15 via-[#facc15]/10 to-brand-border/15 rounded-xl flex-1 animate-pulse" />
+          <div className="h-10 bg-gradient-to-r from-brand-border/15 via-[#facc15]/10 to-brand-border/15 rounded-xl flex-1 animate-pulse" />
         </div>
 
       </div>

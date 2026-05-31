@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Product, PageId } from '../types';
 import { formatPriceIDR } from '../utils';
+import { useAppContext } from '../context/AppContext';
 
 interface ProductsViewProps {
   products: Product[];
@@ -99,6 +100,7 @@ export default function ProductsView({
   onDeleteProduct,
   onSelectProductForTool
 }: ProductsViewProps) {
+  const ctx = useAppContext();
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -107,6 +109,7 @@ export default function ProductsView({
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('Kuliner & Cemilan');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
 
   // CSV Import States
@@ -400,11 +403,19 @@ export default function ProductsView({
     setIsAddOpen(true);
   };
 
+  const PREDEFINED_CATEGORIES = ["Kuliner & Cemilan", "Fashion Muslim", "Kecantikan & Skincare", "Kerajinan & Craft", "Minuman Kekinian"];
+
   const handleOpenEdit = (p: Product) => {
     setEditingId(p.id);
     setName(p.name);
     setPrice(String(p.price));
-    setCategory(p.category);
+    if (PREDEFINED_CATEGORIES.includes(p.category)) {
+      setCategory(p.category);
+      setCustomCategory('');
+    } else {
+      setCategory('Lainnya');
+      setCustomCategory(p.category === 'Lainnya' ? '' : p.category);
+    }
     setDescription(p.description);
     setIsAddOpen(true);
   };
@@ -416,20 +427,21 @@ export default function ProductsView({
       return;
     }
     const parsedPrice = Number(price) || 0;
+    const finalCategory = category === 'Lainnya' && customCategory.trim() ? customCategory.trim() : category;
 
     if (editingId) {
       onEditProduct({
         id: editingId,
         name,
         price: parsedPrice,
-        category,
+        category: finalCategory,
         description
       });
     } else {
       onAddProduct({
         name,
         price: parsedPrice,
-        category,
+        category: finalCategory,
         description
       });
     }
@@ -822,7 +834,16 @@ export default function ProductsView({
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDeleteProduct(p.id)}
+                      onClick={() => {
+                        ctx.triggerConfirm({
+                          title: "Hapus Produk",
+                          message: `Apakah Anda yakin ingin menghapus "${p.name}" dari katalog? Tindakan ini permanen dan tidak dapat dibatalkan.`,
+                          type: "danger",
+                          confirmText: "HAPUS SEKARANG",
+                          cancelText: "BATAL",
+                          onConfirm: () => onDeleteProduct(p.id)
+                        });
+                      }}
                       className="p-1.5 hover:bg-red-500/10 hover:text-red-400 rounded text-brand-muted transition cursor-pointer"
                       title="Hapus Produk"
                     >
@@ -884,7 +905,7 @@ export default function ProductsView({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="glass-card neumorph p-5 sm:p-6 md:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto relative z-10 border border-brand-accent/40 scrollbar-thin"
+              className="glass-card p-6 md:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto relative z-10 border border-[#facc15]/30 bg-gradient-to-b from-[#1c1305] via-[#0d0903] to-[#140e04] shadow-[0_0_30px_rgba(250,204,21,0.08)] rounded-2xl flex flex-col scrollbar-thin"
             >
               <div className="flex justify-between items-center border-b border-brand-border/30 pb-4 mb-6">
                 <h3 className="font-serif font-medium text-lg text-brand-text flex items-center gap-2">
@@ -907,7 +928,7 @@ export default function ProductsView({
                   <input
                     type="text"
                     required
-                    className="w-full bg-[#1c1410] border border-brand-border rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
+                    className="w-full bg-[#1c1410]/60 border border-brand-accent/20 rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
                     placeholder="Contoh: Basreng Krispi Daun Jeruk 250g"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -916,13 +937,13 @@ export default function ProductsView({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-mono tracking-widest text-[#B4753A] uppercase font-bold mb-1">
+                    <label className="block text-[10px] font-mono tracking-widest text-[#facc15] uppercase font-bold mb-1">
                       HARGA JUAL (RP)
                     </label>
                     <input
                       type="number"
                       required
-                      className="w-full bg-[#1c1410] border border-brand-border rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
+                      className="w-full bg-[#1c1410]/60 border border-brand-accent/20 rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
                       placeholder="Contoh: 15000"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
@@ -930,11 +951,11 @@ export default function ProductsView({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono tracking-widest text-[#B4753A] uppercase font-bold mb-1">
+                    <label className="block text-[10px] font-mono tracking-widest text-[#facc15] uppercase font-bold mb-1">
                       KATEGORI
                     </label>
                     <select
-                      className="w-full bg-[#1c1410] border border-brand-border rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
+                      className="w-full bg-[#1c1410]/60 border border-brand-accent/20 rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                     >
@@ -945,16 +966,31 @@ export default function ProductsView({
                       <option value="Minuman Kekinian">Minuman Kekinian</option>
                       <option value="Lainnya">Lainnya</option>
                     </select>
+                    {category === 'Lainnya' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="mt-3"
+                      >
+                        <input
+                          type="text"
+                          className="w-full bg-[#1c1410]/60 border border-brand-accent/50 rounded px-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition"
+                          placeholder="✍️ Ketik kategori kustom Anda..."
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                        />
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono tracking-widest text-[#B4753A] uppercase font-bold mb-1">
+                  <label className="block text-[10px] font-mono tracking-widest text-[#facc15] uppercase font-bold mb-1">
                     DESKRIPSI PRODUK / BAHAN / KHASIAT
                   </label>
                   <textarea
                     rows={4}
-                    className="w-full bg-[#1c1410] border border-brand-border rounded px-3 py-2 text-xs text-brand-text focus:outline-none focus:border-brand-accent"
+                    className="w-full bg-[#1c1410]/60 border border-brand-accent/20 rounded px-3 py-2 text-xs text-brand-text focus:outline-none focus:border-brand-accent"
                     placeholder="Tuliskan spesifikasi produk, keunggulan, rasa, bahan baku dan instruksi khusus..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}

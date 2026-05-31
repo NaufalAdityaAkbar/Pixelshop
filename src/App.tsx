@@ -331,6 +331,25 @@ export default function App() {
     setActivePage(targetTool);
   };
 
+  // Safe navigation interceptor for unsaved content warning
+  const navigateToPage = (newPage: PageId) => {
+    const generatorTools = ['caption_tool', 'description_tool', 'content_plan_tool', 'chat_reply_tool', 'competitor_tool'];
+    if (generatorTools.includes(activePage)) {
+      const savedStatus = localStorage.getItem(`pixelshop_saved_${activePage}`);
+      const cachedData = localStorage.getItem(`pixelshop_cache_${activePage}`);
+      if (cachedData && savedStatus === 'false') {
+        const confirmLeave = window.confirm(
+          '⚠️ Hasil formulasi Anda belum disimpan ke Riwayat!\n\nApakah Anda ingin keluar tanpa menyimpan? Klik OK untuk keluar tanpa menyimpan, atau Cancel untuk tetap di halaman ini.'
+        );
+        if (!confirmLeave) {
+          return;
+        }
+      }
+    }
+    setPreselectedProduct(null);
+    setActivePage(newPage);
+  };
+
   // Render Page dispatcher
   const renderCurrentView = () => {
     switch (activePage) {
@@ -342,7 +361,7 @@ export default function App() {
             contentsCount={contents.length}
             events={events}
             achievements={achievements}
-            onNavigate={setActivePage}
+            onNavigate={navigateToPage}
             onPostCheck={checkOffPost}
             onAddXP={addXP}
           />
@@ -370,7 +389,7 @@ export default function App() {
             onAddXP={addXP}
             onSaveContent={saveGeneratedContent}
             onAddCalendarEvents={addCalendarEvents}
-            onNavigate={setActivePage}
+            onNavigate={navigateToPage}
           />
         );
       case 'calendar':
@@ -380,7 +399,7 @@ export default function App() {
             onCheckPost={checkOffPost}
             onReschedule={rescheduleEvent}
             onDeleteEvent={deleteCalendarEvent}
-            onNavigate={setActivePage}
+            onNavigate={navigateToPage}
           />
         );
       case 'history':
@@ -388,7 +407,7 @@ export default function App() {
           <HistoryView
             contents={contents}
             onDeleteContent={deleteGeneratedContent}
-            onNavigate={setActivePage}
+            onNavigate={navigateToPage}
           />
         );
       case 'achievements':
@@ -399,6 +418,8 @@ export default function App() {
             onAddXP={addXP}
             onSaveContent={saveGeneratedContent}
             shopInfo={shopInfo}
+            aiTrainer={{} as any}
+            updateAiTrainer={async () => {}}
           />
         );
       case 'settings':
@@ -508,7 +529,7 @@ export default function App() {
       {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-brand-bg/80 backdrop-blur border-b border-brand-border/40 px-4 py-4 max-w-7xl mx-auto w-full flex justify-between items-center">
         <div
-          onClick={() => setActivePage('dashboard')}
+          onClick={() => navigateToPage('dashboard')}
           className="flex items-center gap-2 cursor-pointer font-display text-xl font-bold text-brand-text"
         >
           <span className="p-1 px-2 bg-brand-accent text-brand-bg rounded-lg">
@@ -559,8 +580,7 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      setPreselectedProduct(null); // Clear preselect trace on manual click navigation
-                      setActivePage(item.id as PageId);
+                      navigateToPage(item.id as PageId);
                     }}
                     className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold transition duration-150 flex items-center gap-3 ${
                       isActive
@@ -611,8 +631,7 @@ export default function App() {
                     <button
                       key={item.id}
                       onClick={() => {
-                        setPreselectedProduct(null);
-                        setActivePage(item.id as PageId);
+                        navigateToPage(item.id as PageId);
                         setMobileMenuOpen(false);
                       }}
                       className={`py-3 px-4 rounded-lg text-xs font-semibold flex items-center gap-2 transition ${
@@ -670,7 +689,7 @@ export default function App() {
               </motion.div>
             </AnimatePresence>
           </motion.div>
-          <FloatingWorkspaceBar latestContent={contents[0] || null} />
+          <FloatingWorkspaceBar latestContent={contents[0] || null} isVisible={true} />
         </motion.main>
       </div>
     </div>

@@ -29,6 +29,14 @@ import {
 import { PageId, ShopInfo, UserSession } from '../types';
 import { applySectionGradients } from '../lib/theme';
 
+// Mocked NextAuth hooks for compatibility & stability in React 19 / Next.js 16 App Router
+const useSession = (): { data: any; status: string } => ({ data: null, status: 'unauthenticated' });
+const signIn = (provider?: string, options?: any): void => {
+  console.log("OAuth sign-in triggered via fallback wrapper:", provider, options);
+};
+
+import { useAppContext } from '../context/AppContext';
+
 const dummyTestimonials = [
   {
     initials: "FR",
@@ -147,67 +155,180 @@ export default function LandingAndAuth({
   updateShopInfo,
   activePage = 'landing'
 }: LandingAndAuthProps) {
+  const ctx = useAppContext();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('naufaladityaakbar@gmail.com');
-  const [password, setPassword] = useState('password123');
-  const [shopName, setShopName] = useState('Waroeng Rasa Nusantara');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [shopName, setShopName] = useState('');
 
   // Onboarding Wizard State
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [obShopName, setObShopName] = useState('');
   const [obCategory, setObCategory] = useState('Kuliner & Cemilan');
+  const [obCustomCategory, setObCustomCategory] = useState('');
   const [obDesc, setObDesc] = useState('');
   const [obPlatforms, setObPlatforms] = useState<string[]>(['instagram']);
-  const [obBrandVoice, setObBrandVoice] = useState<'santai' | 'formal' | 'ceria' | 'elegan'>('ceria');
+  const [obBrandVoice, setObBrandVoice] = useState<string>('ceria');
+  const [obCustomBrandVoice, setObCustomBrandVoice] = useState('');
   const [obFirstProduct, setObFirstProduct] = useState('');
   const [obFirstPrice, setObFirstPrice] = useState('');
 
   // Form errors
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleAuth = (e: React.FormEvent) => {
+  // Auth Loading States
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authLoadingStep, setAuthLoadingStep] = useState('');
+
+  // NextAuth integration
+  const { data: nextAuthSession, status } = useSession();
+
+  React.useEffect(() => {
+    if (status === 'authenticated' && nextAuthSession?.user?.email && !session.isLoggedIn && !isAuthLoading) {
+      handleNextAuthSuccess(nextAuthSession.user);
+    }
+  }, [status, nextAuthSession, session.isLoggedIn, isAuthLoading]);
+
+  const handleNextAuthSuccess = async (user: any) => {
+    setIsAuthLoading(true);
+    setAuthLoadingStep('Sinkronisasi dengan PixelShop... ⚡');
+    
+    let googleEmail = user.email;
+    let googleName = user.name;
+    
+    // Attempt to check if user already exists in PostgreSQL
+    let dbShop = null;
+    try {
+      const checkRes = await fetch('/api/pixelshop/get-db-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: googleEmail })
+      });
+      if (checkRes.ok) {
+        const data = await checkRes.json();
+        if (data && !data.new_user && !data.db_offline) {
+          dbShop = data;
+        }
+      }
+    } catch (err) {
+      console.warn("PostgreSQL offline, proceeding with local mock:", err);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    if (dbShop) {
+      setAuthLoadingStep('Berhasil Sinkron! Membuka Dashboard... 🎉');
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      const googleSession: UserSession = {
+        email: googleEmail,
+        isLoggedIn: true,
+        shopInfo: dbShop.shopInfo
+      };
+      onLogin(googleSession);
+      onNavigate('dashboard');
+    } else {
+      setAuthLoadingStep('Menyiapkan Kanvas Onboarding Anda... 🎨');
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      const googleSession: UserSession = {
+        email: googleEmail,
+        isLoggedIn: true,
+        shopInfo: {
+          shopName: '', // Kosongkan agar terdeteksi needsOnboarding = true
+          category: 'Kuliner & Cemilan',
+          description: 'Toko UMKM modern berdaya kecerdasan buatan.',
+          platforms: ['instagram', 'shopee', 'whatsapp'],
+          brandVoice: 'santai',
+          level: 1,
+          xp: 50,
+          streak: 1
+        }
+      };
+      onLogin(googleSession);
+      onNavigate('onboarding');
+    }
+
+    setIsAuthLoading(false);
+    setAuthLoadingStep('');
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setErrorMsg('Tolong masukkan email.');
       return;
     }
     setErrorMsg('');
+    setIsAuthLoading(true);
 
-    if (activeTab === 'register') {
-      const newSession: UserSession = {
-        email,
-        isLoggedIn: true,
-        shopInfo: {
-          shopName: shopName || 'PixelShop Baru',
-          category: 'Retail & Fashion',
-          description: 'Toko baru keren berdaya AI.',
-          platforms: ['instagram', 'whatsapp'],
-          brandVoice: 'ceria',
-          level: 1,
-          xp: 10,
-          streak: 1
+    try {
+      if (activeTab === 'register') {
+        setAuthLoadingStep('Membuat Akun PixelShop...');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const newSession: UserSession = {
+          email,
+          isLoggedIn: true,
+          shopInfo: {
+            shopName: '', // Kosongkan agar terdeteksi needsOnboarding = true di MainLayout
+            category: 'Retail & Fashion',
+            description: 'Toko baru keren berdaya AI.',
+            platforms: ['instagram', 'whatsapp'],
+            brandVoice: 'ceria',
+            level: 1,
+            xp: 10,
+            streak: 1
+          }
+        };
+        onLogin(newSession);
+        onNavigate('onboarding');
+      } else {
+        setAuthLoadingStep('Menghubungkan ke PixelShop...');
+        
+        // Attempt to load from PostgreSQL Prisma db
+        let dbShop = null;
+        try {
+          const res = await fetch('/api/pixelshop/get-db-state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && !data.new_user && !data.db_offline) {
+              dbShop = data;
+            }
+          }
+        } catch (dbErr) {
+          console.warn("DB offline fallback to local mock:", dbErr);
         }
-      };
-      onLogin(newSession);
-      onNavigate('onboarding');
-    } else {
-      // Login - prefill with default session or saved session
-      const existingSession: UserSession = {
-        email,
-        isLoggedIn: true,
-        shopInfo: {
-          shopName: shopName || 'Waroeng Rasa Nusantara',
-          category: 'Fesyen & Kuliner Lokal',
-          description: 'Menyediakan fashion muslim premium bergaya kekinian dan cemilan pedas gurih buatan lokal.',
-          platforms: ['instagram', 'tiktok', 'shopee', 'whatsapp'],
-          brandVoice: 'ceria',
-          level: 1,
-          xp: 120,
-          streak: 3
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        if (dbShop) {
+          setAuthLoadingStep('Sinkronisasi Akun Toko Anda... ⚡');
+          await new Promise((resolve) => setTimeout(resolve, 600));
+
+          const existingSession: UserSession = {
+            email,
+            isLoggedIn: true,
+            shopInfo: dbShop.shopInfo
+          };
+          onLogin(existingSession);
+          onNavigate('dashboard');
+        } else {
+          setIsAuthLoading(false);
+          setAuthLoadingStep('');
+          setErrorMsg('Alamat email belum terdaftar. Silakan daftar terlebih dahulu.');
+          return;
         }
-      };
-      onLogin(existingSession);
-      onNavigate('dashboard');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal login.');
+    } finally {
+      setIsAuthLoading(false);
+      setAuthLoadingStep('');
     }
   };
 
@@ -219,23 +340,51 @@ export default function LandingAndAuth({
     }
   };
 
-  const submitOnboarding = () => {
+  const submitOnboarding = async () => {
     if (!obShopName.trim()) {
       alert('Nama toko tidak boleh kosong!');
       return;
     }
+    const finalCategory = obCategory === 'custom' ? obCustomCategory : obCategory;
+    const finalBrandVoice = obBrandVoice === 'custom' ? obCustomBrandVoice : obBrandVoice;
+
     const finalShop: ShopInfo = {
       shopName: obShopName,
-      category: obCategory,
+      category: finalCategory || 'Kuliner & Cemilan',
       description: obDesc || 'Fokus meluncurkan produk berkualitas global buatan lokal.',
       platforms: obPlatforms,
-      brandVoice: obBrandVoice,
+      brandVoice: finalBrandVoice as any || 'ceria',
       level: 1,
       xp: 50, // bonus setup
       streak: 1
     };
 
     updateShopInfo(finalShop);
+
+    // Persist onboarding state in PostgreSQL
+    if (session.isLoggedIn && session.email) {
+      try {
+        await fetch('/api/pixelshop/save-onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: session.email,
+            shopName: obShopName,
+            category: finalCategory,
+            description: obDesc || 'Fokus meluncurkan produk berkualitas global buatan lokal.',
+            platforms: obPlatforms,
+            brandVoice: finalBrandVoice,
+            firstProduct: obFirstProduct.trim() ? {
+              name: obFirstProduct,
+              price: Number(obFirstPrice) || 25000
+            } : null
+          })
+        });
+      } catch (err) {
+        console.error("Gagal menyimpan onboarding ke database:", err);
+      }
+    }
+
     // Add first product helper if user input it
     if (obFirstProduct.trim()) {
       const userProducts = localStorage.getItem('pixelshop_products');
@@ -245,7 +394,7 @@ export default function LandingAndAuth({
         name: obFirstProduct,
         price: Number(obFirstPrice) || 25000,
         description: 'Produk pertama yang dikonfigurasi saat onboarding.',
-        category: obCategory
+        category: finalCategory
       });
       localStorage.setItem('pixelshop_products', JSON.stringify(productsList));
     }
@@ -253,6 +402,38 @@ export default function LandingAndAuth({
     // Trigger achievements Grand Opening setup
     onNavigate('dashboard');
   };
+
+  // Global Full-Screen Auth Loading Overlay
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-brand-bg relative overflow-hidden flex flex-col justify-center items-center px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex flex-col justify-center items-center gap-6"
+        >
+          {/* Spinning particle galaxy */}
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-4 border-t-brand-accent border-r-brand-accent/30 border-b-brand-accent/10 border-l-brand-accent/50 animate-spin" />
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1] }} 
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="absolute inset-4 rounded-full bg-gradient-to-br from-brand-accent to-[#B4753A] flex items-center justify-center shadow-lg shadow-brand-accent/20"
+            >
+              <Sparkles className="w-5 h-5 text-brand-bg animate-pulse" />
+            </motion.div>
+          </div>
+
+          <div className="text-center space-y-2">
+            <h3 className="font-display font-medium text-lg text-brand-text uppercase tracking-widest animate-pulse">PixelShop AI</h3>
+            <p className="text-brand-accent font-mono text-xs tracking-wider bg-brand-accent/10 px-4 py-1.5 rounded-full border border-brand-accent/20 max-w-sm mx-auto">
+              {authLoadingStep || 'Menyiapkan Kanvas Kreatif Anda...'}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Auth Page renders on activePage === 'auth'
   if (activePage === 'auth') {
@@ -377,36 +558,53 @@ export default function LandingAndAuth({
               type="submit"
               className="w-full btn-accent py-3.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 mt-2 shadow-lg hover:shadow-brand-accent/30 transition-all duration-300 cursor-pointer"
             >
-              {activeTab === 'login' ? 'MASUK KE ADMIN PANEL' : 'MULAI PROSES ONBOARDING (+50 XP)'}
+              {activeTab === 'login' ? 'MASUK KE TOKO' : 'MULAI PROSES ONBOARDING (+50 XP)'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
           {/* Social Auth Option - Google OAuth Centered Request */}
           <div className="space-y-3 pt-3 border-t border-brand-border/45">
-            <div className="relative flex justify-center text-[10px] font-mono">
+            <button
+              type="button"
+              onClick={async () => {
+                setIsAuthLoading(true);
+                setAuthLoadingStep('Menyiapkan Dashboard Demo UMKM... ⚡');
+                await new Promise((resolve) => setTimeout(resolve, 800));
+
+                const demoSession: UserSession = {
+                  email: 'demo@pixelshop.ai',
+                  isLoggedIn: true,
+                  shopInfo: {
+                    shopName: 'Ayam Geprek Sambal Korek',
+                    category: 'Kuliner & Cemilan',
+                    description: 'Kuliner ayam geprek renyah gurih dengan sambal ulek korek segar khas bandung.',
+                    platforms: ['instagram', 'shopee', 'whatsapp'],
+                    brandVoice: 'ceria',
+                    level: 4,
+                    xp: 680,
+                    streak: 3
+                  }
+                };
+                onLogin(demoSession);
+                onNavigate('dashboard');
+                setIsAuthLoading(false);
+              }}
+              className="w-full bg-[#facc15] hover:bg-[#facc15]/90 text-black py-3.5 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(250,204,21,0.25)]"
+            >
+              🚀 MASUK INSTAN / PREVIEW (1-KLIK)
+            </button>
+
+            <div className="relative flex justify-center text-[10px] font-mono pt-1">
               <span className="bg-[#261e14] px-3 text-brand-muted uppercase">Atau Hubungkan Lewat</span>
             </div>
 
             <button
               type="button"
               onClick={() => {
-                const googleSession: UserSession = {
-                  email: email || 'naufaladityaakbar@gmail.com',
-                  isLoggedIn: true,
-                  shopInfo: {
-                    shopName: shopName || 'Rasa Nusantara Gg. 3',
-                    category: 'Kuliner & Cemilan',
-                    description: 'Toko UMKM modern berdaya kecerdasan buatan.',
-                    platforms: ['instagram', 'shopee', 'whatsapp'],
-                    brandVoice: 'santai',
-                    level: 1,
-                    xp: 50,
-                    streak: 1
-                  }
-                };
-                onLogin(googleSession);
-                onNavigate('onboarding');
+                setIsAuthLoading(true);
+                setAuthLoadingStep('Mengarahkan ke Google...');
+                signIn('google', { callbackUrl: '/' });
               }}
               className="w-full bg-[#1c1410] border border-brand-border hover:border-brand-accent/50 text-brand-text py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2.5 cursor-pointer"
             >
@@ -507,9 +705,28 @@ export default function LandingAndAuth({
                       <option value="Kecantikan & Skincare">Kecantikan & Skincare (Glow & Natural)</option>
                       <option value="Kerajinan & Craft">Kerajinan & Craft Handmade</option>
                       <option value="Minuman Kekinian">Minuman & Kopi Milenial</option>
-                      <option value="Lainnya">Sektor Kreatif Lainnya</option>
+                      <option value="custom">✍️ Tulis Kategori Kustom Anda...</option>
                     </select>
                   </div>
+
+                  {obCategory === 'custom' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-1"
+                    >
+                      <label className="block text-xs font-mono text-brand-text mb-2 tracking-wider">
+                        KATEGORI USAHA KUSTOM
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-[#1c1410] border border-brand-border rounded-lg px-4 py-3 text-brand-text focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition duration-150"
+                        placeholder="Contoh: Mainan Anak Edukatif, Suku Cadang Motor"
+                        value={obCustomCategory}
+                        onChange={(e) => setObCustomCategory(e.target.value)}
+                      />
+                    </motion.div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-mono text-brand-text mb-2 tracking-wider">
@@ -634,11 +851,13 @@ export default function LandingAndAuth({
                         { id: 'santai', title: '😊 Santai & Akrab', desc: 'Kak, Bestie, sob' },
                         { id: 'formal', title: '💼 Formal & Profesional', desc: 'Bapak/Ibu, Anda' },
                         { id: 'ceria', title: '⚡ Ceria & Berenergi', desc: 'Hype, Seru, Promo!' },
-                        { id: 'elegan', title: '✨ Elegan & Eksklusif', desc: 'Pilihan Khusus' }
+                        { id: 'elegan', title: '✨ Elegan & Eksklusif', desc: 'Pilihan Khusus' },
+                        { id: 'custom', title: '✍️ Gaya Bahasa Kustom', desc: 'Tulis gayamu sendiri' }
                       ].map((voice) => (
                         <button
                           key={voice.id}
-                          onClick={() => setObBrandVoice(voice.id as any)}
+                          onClick={() => setObBrandVoice(voice.id)}
+                          type="button"
                           className={`p-3 rounded-lg border transition text-left cursor-pointer ${
                             obBrandVoice === voice.id
                               ? 'border-brand-accent bg-brand-accent/15 text-brand-text'
@@ -650,6 +869,25 @@ export default function LandingAndAuth({
                         </button>
                       ))}
                     </div>
+
+                    {obBrandVoice === 'custom' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-1.5 mt-2"
+                      >
+                        <label className="block text-[10px] font-mono text-brand-muted uppercase tracking-wider">
+                          NADA BICARA KUSTOM Anda
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full bg-[#1c1410] border border-brand-border rounded px-3 py-2 text-xs text-brand-text focus:outline-none focus:border-brand-accent"
+                          placeholder="Contoh: Jaksel Gaul, Skena Indie, Emak-emak Rempong"
+                          value={obCustomBrandVoice}
+                          onChange={(e) => setObCustomBrandVoice(e.target.value)}
+                        />
+                      </motion.div>
+                    )}
                   </div>
 
                   <div className="border-t border-brand-border/45 pt-4">
@@ -744,6 +982,7 @@ export default function LandingAndAuth({
               <span>Pixel</span><span className="font-script text-3xl text-brand-accent font-normal tracking-normal lowercase -ml-1">shop</span>
             </div>
             <button
+              type="button"
               onClick={() => {
                 setActiveTab('login');
                 onNavigate('auth');
@@ -790,13 +1029,32 @@ export default function LandingAndAuth({
                   Mulai Gratis Sekarang <ArrowRight className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => {
-                    setActiveTab('login');
-                    onNavigate('auth');
+                  onClick={async () => {
+                    setIsAuthLoading(true);
+                    setAuthLoadingStep('Menyiapkan Dashboard Demo UMKM... ⚡');
+                    await new Promise((resolve) => setTimeout(resolve, 800));
+
+                    const demoSession: UserSession = {
+                      email: 'demo@pixelshop.ai',
+                      isLoggedIn: true,
+                      shopInfo: {
+                        shopName: 'Ayam Geprek Sambal Korek',
+                        category: 'Kuliner & Cemilan',
+                        description: 'Kuliner ayam geprek renyah gurih dengan sambal ulek korek segar khas bandung.',
+                        platforms: ['instagram', 'shopee', 'whatsapp'],
+                        brandVoice: 'ceria',
+                        level: 4,
+                        xp: 680,
+                        streak: 3
+                      }
+                    };
+                    onLogin(demoSession);
+                    onNavigate('dashboard');
+                    setIsAuthLoading(false);
                   }}
-                  className="px-6 py-4 glass-card hover-ebb-tide rounded-xl flex items-center justify-center gap-2 text-sm text-brand-text transition duration-150 cursor-pointer"
+                  className="px-6 py-4 border-2 border-[#facc15]/80 hover:bg-[#facc15]/15 text-[#facc15] hover:text-white rounded-xl flex items-center justify-center gap-2 text-sm font-extrabold transition-all duration-150 cursor-pointer shadow-[0_0_15px_rgba(250,204,21,0.15)] animate-pulse"
                 >
-                  Login Demo Toko
+                  🚀 MASUK INSTAN / PREVIEW (1-KLIK)
                 </button>
               </div>
 
@@ -823,9 +1081,9 @@ export default function LandingAndAuth({
               
               <AnimatePresence>
                 {[
-                  { id: 1, title: 'Basreng Pedas', price: 'Rp 25.000', tag: 'KULINER', rotateY: -15, rotateX: 10, z: 0, x: -80, y: -40, delay: 0 },
-                  { id: 2, title: 'Hijab Pashmina', price: 'Rp 75.000', tag: 'FASHION', rotateY: 20, rotateX: 5, z: -50, x: 100, y: 30, delay: 0.2 },
-                  { id: 3, title: 'Kopi Susu Aren', price: 'Rp 18.000', tag: 'MINUMAN', rotateY: 5, rotateX: -15, z: 80, x: 20, y: 70, delay: 0.4 }
+                  { id: 1, title: 'AI Brand Voice Trainer', desc: 'Latih kecerdasan AI sesuai ciri khas emosi & tone unik tokomu.', tag: 'BRAND VOICE', metric: '9 Emosi Warna', emoji: '🎙️', rotateY: -15, rotateX: 10, z: 0, x: -80, y: -40, delay: 0 },
+                  { id: 2, title: 'Auto Content Planner', desc: 'Jadwalkan & draf konten promosi sebulan penuh dalam 10 detik.', tag: 'PLANNER', metric: 'Google Calendar Sync', emoji: '📅', rotateY: 20, rotateX: 5, z: -50, x: 100, y: 30, delay: 0.2 },
+                  { id: 3, title: 'Smart Caption Copy', desc: 'Ubah ide draf mentah menjadi sales copy memikat berdaya konversi tinggi.', tag: 'COPYWRITING', metric: 'Konversi Tinggi', emoji: '✍️', rotateY: 5, rotateX: -15, z: 80, x: 20, y: 70, delay: 0.4 }
                 ].map((item, idx) => (
                   <motion.div
                     key={item.id}
@@ -846,28 +1104,29 @@ export default function LandingAndAuth({
                       bounce: 0.4
                     }}
                     whileHover={{ scale: 1.05, rotateY: 0, rotateX: 0, z: 100, zIndex: 50, transition: { duration: 0.3 } }}
-                    className="absolute w-64 glass-card p-5 rounded-2xl border border-brand-accent/20 cursor-pointer shadow-2xl backdrop-blur-xl bg-[#1c1410]/80 preserve-3d"
+                    className="absolute w-64 glass-card p-5 rounded-2xl border border-brand-accent/20 cursor-pointer shadow-2xl backdrop-blur-xl bg-[#1c1410]/85 preserve-3d"
                     style={{ transformStyle: 'preserve-3d' }}
                   >
                     <div className="flex justify-between items-start mb-4 translate-z-12">
                       <span className="text-[9px] font-mono font-bold px-2 py-1 bg-brand-accent/20 text-brand-accent rounded uppercase tracking-widest">{item.tag}</span>
-                      <ShoppingBag className="w-4 h-4 text-brand-muted" />
+                      <Sparkles className="w-4 h-4 text-brand-accent" />
                     </div>
                     
-                    <div className="h-28 w-full bg-gradient-to-br from-brand-accent/10 to-brand-bg rounded-xl mb-4 flex items-center justify-center translate-z-20 border border-brand-border/30">
-                       <span className="text-4xl filter drop-shadow-lg">{item.id === 1 ? '🌶️' : item.id === 2 ? '🧣' : '☕'}</span>
+                    <div className="h-28 w-full bg-gradient-to-br from-brand-accent/15 to-brand-bg rounded-xl mb-4 flex items-center justify-center translate-z-20 border border-brand-border/30 relative overflow-hidden">
+                       <span className="text-5xl filter drop-shadow-[0_0_15px_rgba(212,149,106,0.4)] animate-pulse">{item.emoji}</span>
                     </div>
 
                     <div className="space-y-1 translate-z-12">
-                      <h3 className="font-bold text-base text-brand-text truncate">{item.title}</h3>
-                      <div className="text-sm font-mono text-brand-accent font-semibold">{item.price}</div>
+                      <span className="text-[9px] font-mono text-brand-muted tracking-wider uppercase block font-semibold">{item.metric}</span>
+                      <h3 className="font-extrabold text-sm text-brand-text truncate">{item.title}</h3>
+                      <p className="text-[10px] text-brand-muted/90 leading-snug">{item.desc}</p>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-brand-border/30 flex justify-between items-center translate-z-12">
                       <div className="h-1.5 w-16 bg-[#33251a] rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-accent w-2/3" />
+                        <div className="h-full bg-emerald-500 w-full" />
                       </div>
-                      <span className="text-[10px] text-brand-muted font-bold">Stok Aman</span>
+                      <span className="text-[9px] font-mono text-emerald-400 font-bold uppercase tracking-wider">FITUR READY</span>
                     </div>
                   </motion.div>
                 ))}
@@ -880,7 +1139,7 @@ export default function LandingAndAuth({
                 className="absolute -bottom-8 bg-[#261e14] border border-brand-border/40 px-6 py-3 rounded-full text-xs font-mono font-bold text-brand-text shadow-xl flex items-center gap-3 z-40"
               >
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>AI Sedang Merumuskan Strategi Penjualan</span>
+                <span>PixelShop AI Siap Mengoptimalkan Bisnis Anda</span>
               </motion.div>
             </div>
           </div>
